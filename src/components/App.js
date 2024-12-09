@@ -12,13 +12,15 @@ import FinishButton from "./FinishButton";
 import RestartButton from "./RestartButton";
 import Footer from "./Footer";
 import Timer from "./Timer";
-const SECS_PER_QUESTION = 30
+import ReviewButton from "./ReviewButton";
+import PreviousButton from "./PreviousButton";
+const SECS_PER_QUESTION = 30;
 const initialState = {
   questions: [],
   // loading, error, ready, active, finished
   status: "loading",
   index: 0,
-  answer: null,
+  answers: [],
   points: 0,
   highScore: Number(localStorage.getItem("highScore")) || 0,
   secondsRemaining: null,
@@ -31,18 +33,24 @@ function reducer(state, action) {
     case "dataFailed":
       return { ...state, status: "error" };
     case "start":
-      return { ...state, status: "active", secondsRemaining: state.questions.length * SECS_PER_QUESTION };
+      return {
+        ...state,
+        status: "active",
+        secondsRemaining: state.questions.length * SECS_PER_QUESTION,
+      };
     case "newAnswer":
       return {
         ...state,
-        answer: action.payload,
+        answers: [...state.answers, action.payload],
         points:
           action.payload === state.questions[state.index].correctOption
             ? state.questions[state.index].points + state.points
             : state.points,
       };
     case "nextQuestion":
-      return { ...state, index: state.index + 1, answer: null };
+      return { ...state, index: state.index + 1 };
+    case "prevQuestion":
+      return { ...state, index: state.index - 1 };
     case "finishQuiz":
       const highScore = Math.max(state.highScore, state.points);
       localStorage.setItem("highScore", highScore);
@@ -51,6 +59,8 @@ function reducer(state, action) {
       return { ...initialState, status: "ready", questions: state.questions };
     case "tick":
       return { ...state, secondsRemaining: state.secondsRemaining - 1 };
+    case "review":
+      return { ...state, status: "review", index: 0 };
     default:
       throw new Error("Action Unknown");
   }
@@ -58,7 +68,7 @@ function reducer(state, action) {
 
 function App() {
   const [
-    { status, questions, index, answer, points, highScore, secondsRemaining },
+    { status, questions, index, answers, points, highScore, secondsRemaining },
     dispatch,
   ] = useReducer(reducer, initialState);
 
@@ -97,19 +107,26 @@ function App() {
               numOfQuestions={questions.length}
               points={points}
               maxPossiblePoints={maxPossiblePoints}
-              answer={answer}
+              answers={answers}
             />
             <Question
               question={questions[index]}
               dispatch={dispatch}
-              answer={answer}
+              answers={answers}
+              index={index}
             />
             <Footer>
               <Timer dispatch={dispatch} secondsRemaining={secondsRemaining} />
               {index + 1 === questions.length ? (
-                <FinishButton dispatch={dispatch} answer={answer} />
+                <FinishButton
+                  dispatch={dispatch}
+                  hasFinished={answers.length === questions.length}
+                />
               ) : (
-                <NextButton dispatch={dispatch} answer={answer} />
+                <NextButton
+                  dispatch={dispatch}
+                  hasAnswered={answers.length > index}
+                />
               )}
             </Footer>
           </>
@@ -121,7 +138,35 @@ function App() {
               maxPossiblePoints={maxPossiblePoints}
               highScore={highScore}
             />
+            <Footer>
+              <ReviewButton dispatch={dispatch} />
+              <RestartButton dispatch={dispatch} />
+            </Footer>
+          </>
+        )}
+        {status === "review" && (
+          <>
+            <Progress
+              index={index}
+              numOfQuestions={questions.length}
+              points={points}
+              maxPossiblePoints={maxPossiblePoints}
+              answers={answers}
+            />
+            <Question
+              question={questions[index]}
+              dispatch={dispatch}
+              answers={answers}
+              index={index}
+            />
             <RestartButton dispatch={dispatch} />
+            <Footer>
+              {index !== 0 && <PreviousButton dispatch={dispatch} />}
+              {index + 1 !== questions.length && (
+                <NextButton dispatch={dispatch} hasAnswered={true} />
+              )}
+            </Footer>
+            
           </>
         )}
       </Main>

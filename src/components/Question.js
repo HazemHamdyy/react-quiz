@@ -1,20 +1,20 @@
-function Question({ question, dispatch, answer }) {
-  const hasAnswered = answer !== null;
+function Question({ question, dispatch, answers, index }) {
+  const hasAnswered = answers.length > index;
   return (
     <div>
       <h4>{question.question}</h4>
       <div className="options">
-        {question.options.map((option, index) => (
+        {question.options.map((option, optionIndex) => (
           <button
-            className={`btn btn-option ${index === answer ? "answer" : ""} ${
+            className={`btn btn-option ${optionIndex === answers[index] ? "answer" : ""} ${
               hasAnswered
-                ? index === question.correctOption
+                ? optionIndex === question.correctOption
                   ? "correct"
                   : "wrong"
                 : ""
             }`}
             key={option}
-            onClick={() => dispatch({ type: "newAnswer", payload: index })}
+            onClick={() => dispatch({ type: "newAnswer", payload: optionIndex })}
             disabled={hasAnswered}
           >
             {option}
